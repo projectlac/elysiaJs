@@ -11,11 +11,10 @@ const app = new Elysia();
 
 app.use(swagger());
 app.use(AuthController);
-app.group("/user", (route) => route.use(isAuthenticated).use(UserController));
-app.group("/table", (route) => route.use(isAuthenticated).use(TableController));
-app.group("/food", (route) => route.use(isAuthenticated).use(FoodController));
-app.group("/order", (route) => route.use(isAuthenticated).use(OrderController));
-
+app.group("/user", (route) => route.use(UserController));
+app.group("/table", (route) => route.use(TableController));
+app.group("/food", (route) => route.use(FoodController));
+app.group("/order", (route) => route.use(OrderController));
 app.listen(3000);
 
 console.log(

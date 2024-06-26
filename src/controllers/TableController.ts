@@ -12,34 +12,7 @@ import { TABLE_STATUS } from "../constant/constant";
 
 export const TableController = new Elysia()
   .use(isAuthenticated)
-  .guard({
-    beforeHandle: async ({ jwt, set, cookie: { access_token_cookie } }) => {
-      const verify = await jwt.verify(access_token_cookie.value);
-      if (!verify || !access_token_cookie.value) {
-        set.status = 401;
-        return {
-          success: false,
-          message: "Unauthorized",
-          data: null,
-        };
-      }
 
-      const user = await db.user.findUnique({
-        where: {
-          id: verify.id as string,
-        },
-      });
-
-      if (!user) {
-        set.status = 401;
-        return {
-          success: false,
-          message: "Unauthorized",
-          data: null,
-        };
-      }
-    },
-  })
   .get(
     "/",
     async ({ set, cookie }) => {

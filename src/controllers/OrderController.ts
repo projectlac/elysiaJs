@@ -16,34 +16,6 @@ import { isAuthenticated } from "../utils/isAuthenticated";
 
 export const OrderController = new Elysia()
   .use(isAuthenticated)
-  .guard({
-    beforeHandle: async ({ jwt, set, cookie: { access_token_cookie } }) => {
-      const verify = await jwt.verify(access_token_cookie.value);
-      if (!verify || !access_token_cookie.value) {
-        set.status = 401;
-        return {
-          success: false,
-          message: "Unauthorized",
-          data: null,
-        };
-      }
-
-      const user = await db.user.findUnique({
-        where: {
-          id: verify.id as string,
-        },
-      });
-
-      if (!user) {
-        set.status = 401;
-        return {
-          success: false,
-          message: "Unauthorized",
-          data: null,
-        };
-      }
-    },
-  })
 
   //get current order list
   .get(
@@ -118,73 +90,64 @@ export const OrderController = new Elysia()
   // create Order
   .post(
     "/",
-    async ({ body, cookie: { access_token_cookie }, set, jwt }) => {
-      const verify = await jwt.verify(access_token_cookie.value);
-      if (!verify) {
-        return {
-          success: true,
-          message: "User not found",
-          data: null,
-        };
-      } else {
-        try {
-          const { foodList, tableId } = body;
-          let totalPrice = 0;
-          for (let index = 0; index < foodList.length; index++) {
-            const foodDetail = await db.food.findUnique({
-              where: {
-                id: foodList[index].foodId,
-              },
-              select: {
-                price: true,
-              },
-            });
-            if (foodDetail)
-              totalPrice += +foodDetail?.price * foodList[index].quantity;
-          }
-
-          const order = await db.order.create({
-            data: {
-              tableId: tableId,
-              status: ORDER_STATUS.PENDING,
-              price: totalPrice.toString(),
+    async ({ body, set }) => {
+      try {
+        const { foodList, tableId } = body;
+        let totalPrice = 0;
+        for (let index = 0; index < foodList.length; index++) {
+          const foodDetail = await db.food.findUnique({
+            where: {
+              id: foodList[index].foodId,
             },
             select: {
-              id: true,
+              price: true,
             },
           });
-
-          foodList.forEach(async (item) => {
-            await db.orderFoodDetail.create({
-              data: {
-                foodId: item.foodId,
-                quantity: item.quantity,
-                orderId: order.id,
-              },
-              select: {
-                foodId: true,
-                quantity: true,
-              },
-            });
-          });
-
-          // const updateFood =
-          set.status = 200;
-          return {
-            success: true,
-            message: "order created",
-            data: {},
-          };
-        } catch (error) {
-          console.log(error);
-
-          set.status = 400;
-          return {
-            success: false,
-            message: "Create order fail",
-            data: null,
-          };
+          if (foodDetail)
+            totalPrice += +foodDetail?.price * foodList[index].quantity;
         }
+
+        const order = await db.order.create({
+          data: {
+            tableId: tableId,
+            status: ORDER_STATUS.PENDING,
+            price: totalPrice.toString(),
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        foodList.forEach(async (item) => {
+          await db.orderFoodDetail.create({
+            data: {
+              foodId: item.foodId,
+              quantity: item.quantity,
+              orderId: order.id,
+            },
+            select: {
+              foodId: true,
+              quantity: true,
+            },
+          });
+        });
+
+        // const updateFood =
+        set.status = 200;
+        return {
+          success: true,
+          message: "order created",
+          data: {},
+        };
+      } catch (error) {
+        console.log(error);
+
+        set.status = 400;
+        return {
+          success: false,
+          message: "Create order fail",
+          data: null,
+        };
       }
     },
     {
